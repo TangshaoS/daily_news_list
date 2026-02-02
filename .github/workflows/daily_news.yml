@@ -1,0 +1,48 @@
+name: Daily News Summary
+
+on:
+  # 每天早上6点（北京时间）运行 = UTC 22:00 前一天
+  schedule:
+    - cron: '0 22 * * *'  # UTC 22:00 = 北京时间 06:00
+  
+  # 也可以手动触发
+  workflow_dispatch:
+
+jobs:
+  fetch-and-send:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Run news pipeline
+        run: |
+          python run.py run --limit 40
+      
+      - name: Send email with results
+        env:
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: |
+          python scripts/send_email.py
+      
+      - name: Upload exports as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: news-exports-${{ github.run_number }}
+          path: exports/
+          retention-days: 7

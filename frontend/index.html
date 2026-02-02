@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新闻热点总结 - News Summary</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: var(--text);
+        }
+
+        /* Navigation */
+        nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+        }
+
+        .nav-item {
+            padding: 1rem 1.25rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            white-space: nowrap;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover {
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title .badge {
+            background: var(--primary);
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 1rem;
+        }
+
+        /* News Cards */
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .news-card {
+            background: var(--surface);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+
+        .news-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .news-card-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .news-source {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .news-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .news-card-body {
+            padding: 1.25rem;
+        }
+
+        .news-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            line-height: 1.4;
+        }
+
+        .news-title a {
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .news-title a:hover {
+            color: var(--primary);
+        }
+
+        .news-summary {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .news-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            background: var(--background);
+            color: var(--text-secondary);
+        }
+
+        .tag.geopolitics { background: #fef3c7; color: #92400e; }
+        .tag.economy { background: #dbeafe; color: #1e40af; }
+        .tag.markets { background: #dcfce7; color: #166534; }
+        .tag.commodities { background: #fce7f3; color: #9d174d; }
+        .tag.supply_chain { background: #f3e8ff; color: #6b21a8; }
+        .tag.ai_tech { background: #e0f2fe; color: #0369a1; }
+        .tag.energy_infra { background: #fef9c3; color: #a16207; }
+
+        .news-score {
+            font-size: 0.75rem;
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        /* Hotlist Sidebar */
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 8rem;
+            height: fit-content;
+        }
+
+        .hotlist {
+            background: var(--surface);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+            padding: 1.25rem;
+        }
+
+        .hotlist-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .hotlist-item {
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .hotlist-item:last-child {
+            border-bottom: none;
+        }
+
+        .hotlist-rank {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary);
+            min-width: 1.5rem;
+        }
+
+        .hotlist-rank.top3 {
+            color: var(--danger);
+        }
+
+        .hotlist-content {
+            flex: 1;
+        }
+
+        .hotlist-item-title {
+            font-size: 0.875rem;
+            color: var(--text);
+            text-decoration: none;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .hotlist-item-title:hover {
+            color: var(--primary);
+        }
+
+        .hotlist-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Export Button */
+        .export-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--primary);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .export-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Footer */
+        footer {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 2rem 1.5rem;
+            margin-top: 3rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="#" class="logo">News<span>Summary</span></a>
+            <a href="#" class="export-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7,10 12,15 17,10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                导出到 NotebookLM
+            </a>
+        </div>
+    </header>
+
+    <nav>
+        <div class="nav-content">
+            <a href="#" class="nav-item active">全部热点</a>
+            <a href="#" class="nav-item">地缘政治</a>
+            <a href="#" class="nav-item">经济数据</a>
+            <a href="#" class="nav-item">投资市场</a>
+            <a href="#" class="nav-item">供应链</a>
+            <a href="#" class="nav-item">大宗商品</a>
+            <a href="#" class="nav-item">AI/科技</a>
+            <a href="#" class="nav-item">能源电力</a>
+        </div>
+    </nav>
+
+    <main>
+        <div class="layout">
+            <div class="content">
+                <!-- 地缘政治 Section -->
+                <h2 class="section-title">
+                    地缘政治
+                    <span class="badge">8 条新闻</span>
+                </h2>
+                <div class="news-grid">
+                    <article class="news-card">
+                        <div class="news-card-header">
+                            <span class="news-source">路透社</span>
+                            <span class="news-time">2小时前</span>
+                        </div>
+                        <div class="news-card-body">
+                            <h3 class="news-title">
+                                <a href="#">美国宣布对俄罗斯实施新一轮制裁，涉及能源和金融领域</a>
+                            </h3>
+                            <p class="news-summary">
+                                美国财政部表示，新制裁将针对俄罗斯石油出口和主要银行，预计将影响全球能源市场...
+                            </p>
+                            <div class="news-tags">
+                                <span class="tag geopolitics">地缘政治</span>
+                                <span class="tag supply_chain">供应链</span>
+                                <span class="news-score">热度 0.95</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="news-card">
+                        <div class="news-card-header">
+                            <span class="news-source">金融时报</span>
+                            <span class="news-time">3小时前</span>
+                        </div>
+                        <div class="news-card-body">
+                            <h3 class="news-title">
+                                <a href="#">欧盟考虑扩大对中国电动汽车关税，中方警告将采取反制措施</a>
+                            </h3>
+                            <p class="news-summary">
+                                欧盟委员会正在评估是否将临时关税转为永久性措施，此举可能加剧中欧贸易紧张...
+                            </p>
+                            <div class="news-tags">
+                                <span class="tag geopolitics">地缘政治</span>
+                                <span class="tag markets">市场</span>
+                                <span class="news-score">热度 0.89</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <!-- 经济数据 Section -->
+                <h2 class="section-title">
+                    经济数据与货币政策
+                    <span class="badge">6 条新闻</span>
+                </h2>
+                <div class="news-grid">
+                    <article class="news-card">
+                        <div class="news-card-header">
+                            <span class="news-source">华尔街日报</span>
+                            <span class="news-time">1小时前</span>
+                        </div>
+                        <div class="news-card-body">
+                            <h3 class="news-title">
+                                <a href="#">美联储会议纪要显示官员对降息时机存在分歧</a>
+                            </h3>
+                            <p class="news-summary">
+                                多数官员认为通胀进展不足以支持近期降息，但部分成员担忧就业市场放缓风险...
+                            </p>
+                            <div class="news-tags">
+                                <span class="tag economy">经济</span>
+                                <span class="tag markets">市场</span>
+                                <span class="news-score">热度 0.92</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="news-card">
+                        <div class="news-card-header">
+                            <span class="news-source">彭博社</span>
+                            <span class="news-time">4小时前</span>
+                        </div>
+                        <div class="news-card-body">
+                            <h3 class="news-title">
+                                <a href="#">中国1月CPI同比上涨0.3%，PPI降幅收窄</a>
+                            </h3>
+                            <p class="news-summary">
+                                数据显示消费需求温和复苏，但工业品价格仍面临下行压力，市场预期更多刺激措施...
+                            </p>
+                            <div class="news-tags">
+                                <span class="tag economy">经济</span>
+                                <span class="news-score">热度 0.78</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <!-- 大宗商品 Section -->
+                <h2 class="section-title">
+                    大宗商品与稀土
+                    <span class="badge">4 条新闻</span>
+                </h2>
+                <div class="news-grid">
+                    <article class="news-card">
+                        <div class="news-card-header">
+                            <span class="news-source">路透社</span>
+                            <span class="news-time">5小时前</span>
+                        </div>
+                        <div class="news-card-body">
+                            <h3 class="news-title">
+                                <a href="#">铜价创六个月新高，受中国需求复苏和供应担忧推动</a>
+                            </h3>
+                            <p class="news-summary">
+                                LME铜价突破9000美元/吨，分析师认为新能源转型需求将持续支撑价格...
+                            </p>
+                            <div class="news-tags">
+                                <span class="tag commodities">大宗商品</span>
+                                <span class="tag markets">市场</span>
+                                <span class="news-score">热度 0.85</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="news-card">
+                        <div class="news-card-header">
+                            <span class="news-source">澎湃新闻</span>
+                            <span class="news-time">6小时前</span>
+                        </div>
+                        <div class="news-card-body">
+                            <h3 class="news-title">
+                                <a href="#">稀土出口管制趋严，行业整合加速进行</a>
+                            </h3>
+                            <p class="news-summary">
+                                工信部表示将加强稀土资源战略储备，推动行业高质量发展，关注供应链安全...
+                            </p>
+                            <div class="news-tags">
+                                <span class="tag commodities">大宗商品</span>
+                                <span class="tag supply_chain">供应链</span>
+                                <span class="news-score">热度 0.76</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="hotlist">
+                    <h3 class="hotlist-title">热度榜 TOP 10</h3>
+                    
+                    <div class="hotlist-item">
+                        <span class="hotlist-rank top3">1</span>
+                        <div class="hotlist-content">
+                            <a href="#" class="hotlist-item-title">美国宣布对俄罗斯实施新一轮制裁</a>
+                            <span class="hotlist-meta">路透社 · 3源报道</span>
+                        </div>
+                    </div>
+                    
+                    <div class="hotlist-item">
+                        <span class="hotlist-rank top3">2</span>
+                        <div class="hotlist-content">
+                            <a href="#" class="hotlist-item-title">美联储会议纪要显示降息分歧</a>
+                            <span class="hotlist-meta">华尔街日报 · 2源报道</span>
+                        </div>
+                    </div>
+                    
+                    <div class="hotlist-item">
+                        <span class="hotlist-rank top3">3</span>
+                        <div class="hotlist-content">
+                            <a href="#" class="hotlist-item-title">欧盟考虑扩大对中国电动汽车关税</a>
+                            <span class="hotlist-meta">金融时报 · 2源报道</span>
+                        </div>
+                    </div>
+                    
+                    <div class="hotlist-item">
+                        <span class="hotlist-rank">4</span>
+                        <div class="hotlist-content">
+                            <a href="#" class="hotlist-item-title">铜价创六个月新高</a>
+                            <span class="hotlist-meta">路透社</span>
+                        </div>
+                    </div>
+                    
+                    <div class="hotlist-item">
+                        <span class="hotlist-rank">5</span>
+                        <div class="hotlist-content">
+                            <a href="#" class="hotlist-item-title">中国1月CPI同比上涨0.3%</a>
+                            <span class="hotlist-meta">彭博社</span>
+                        </div>
+                    </div>
+                    
+                    <div class="hotlist-item">
+                        <span class="hotlist-rank">6</span>
+                        <div class="hotlist-content">
+                            <a href="#" class="hotlist-item-title">稀土出口管制趋严</a>
+                            <span class="hotlist-meta">澎湃新闻</span>
+                        </div>
+                    </div>
+                    
+                    <div class="hotlist-item">
+                        <span class="hotlist-rank">7</span>
+                        <div class="hotlist-content">
+                            <a href="#" class="hotlist-item-title">OpenAI发布新一代模型</a>
+                            <span class="hotlist-meta">彭博社</span>
+                        </div>
+                    </div>
+                    
+                    <div class="hotlist-item">
+                        <span class="hotlist-rank">8</span>
+                        <div class="hotlist-content">
+                            <a href="#" class="hotlist-item-title">OPEC+维持减产计划不变</a>
+                            <span class="hotlist-meta">路透社</span>
+                        </div>
+                    </div>
+                    
+                    <div class="hotlist-item">
+                        <span class="hotlist-rank">9</span>
+                        <div class="hotlist-content">
+                            <a href="#" class="hotlist-item-title">日元跌至155关口</a>
+                            <span class="hotlist-meta">金融时报</span>
+                        </div>
+                    </div>
+                    
+                    <div class="hotlist-item">
+                        <span class="hotlist-rank">10</span>
+                        <div class="hotlist-content">
+                            <a href="#" class="hotlist-item-title">台积电考虑扩大美国投资</a>
+                            <span class="hotlist-meta">华尔街日报</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <footer>
+        <p>数据来源：路透社、华尔街日报、彭博社、金融时报、澎湃新闻</p>
+        <p>本站仅聚合公开RSS链接，不存储全文内容。点击标题跳转原文。</p>
+    </footer>
+</body>
+</html>
