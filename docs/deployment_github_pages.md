@@ -14,10 +14,19 @@
 
 ## 二、整体流程概览
 
-1. 把项目推到 GitHub 仓库。
-2. 在仓库设置里把 GitHub Pages 的「发布来源」选成 **GitHub Actions**。
-3. 项目里已准备好部署用的 workflow，推代码后会按 schedule 跑（或你手动跑一次）。
-4. 跑成功后，用户打开 `https://<你的用户名>.github.io/<仓库名>/` 就能看到页面。
+第一步：准备 GitHub 仓库配置
+仓库权限设置：
+进入 GitHub 仓库页面，点击 Settings -> Actions -> General。
+在页面底部找到 Workflow permissions，选择 Read and write permissions（确保 Actions 有权限将构建好的文件推送到分支）。
+
+Pages 设置：
+点击 Settings -> Pages。
+在 Build and deployment -> Source 中，如果使用 Actions 部署，请选择 GitHub Actions。
+
+第二步：创建 Workflow 配置文件
+在项目根目录下，手动创建文件夹结构：.github/workflows/，并在其中新建一个文件，例如 deploy.yml。
+1. 项目里已准备好部署用的 workflow，推代码后会按 schedule 跑（或你手动跑一次）。
+2. 跑成功后，用户打开 `https://<你的用户名>.github.io/<仓库名>/` 就能看到页面。
 
 下面按步骤写。
 
