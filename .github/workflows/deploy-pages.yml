@@ -1,0 +1,55 @@
+# 定时跑流水线并把「前端 + digest」部署到 GitHub Pages，用户可打开网页看每日摘要。
+# 详见 docs/deployment_github_pages.md
+
+name: Deploy to GitHub Pages
+
+on:
+  schedule:
+    - cron: '0 22 * * *'   # 每天 UTC 22:00 = 北京时间 06:00
+  workflow_dispatch:       # 支持在 Actions 页手动点一次运行
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pipeline (fetch + process + store + export)
+        run: python run.py run --limit 40
+
+      - name: Export digest for frontend
+        run: python run.py export --formats digest --limit 40
+
+      - name: Prepare site
+        run: |
+          mkdir -p deploy/exports
+          cp frontend/index.html deploy/index.html
+          cp exports/latest_digest.json deploy/exports/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: deploy/
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: github-pages
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4

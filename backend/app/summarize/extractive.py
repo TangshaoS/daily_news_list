@@ -3,11 +3,15 @@ Extractive summarization - rule-based approach using keyword/sentence scoring.
 
 This is a lightweight, cost-free alternative to LLM summarization.
 Good for MVP when you just need quick key points from RSS summaries.
+Supports cluster-level key points by aggregating multiple sources per cluster.
 """
+from __future__ import annotations
+
 import logging
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
+from typing import Any
 
 from ..models import NewsItem
 
@@ -135,6 +139,37 @@ def extract_key_sentences(
     return [s[2] for s in top_sentences]
 
 
+def _build_item_summary_text(
+    item: NewsItem,
+    meta_map: dict[str, Any] | None = None,
+    content_map: dict[str, list[str]] | None = None,
+) -> str:
+    """
+    Build a single "clean summary" string for one item: meta description or RSS summary,
+    plus optional key paragraphs. Used when aggregating cluster content.
+    """
+    url = item.normalized_url or item.url
+    parts: list[str] = []
+
+    # Prefer meta description, fallback to RSS summary
+    description = ""
+    if meta_map and url in meta_map:
+        meta = meta_map[url]
+        description = getattr(meta, "description", None) or ""
+    if not description and item.summary:
+        description = item.summary
+    if description:
+        parts.append(description.strip())
+
+    # Append key paragraphs if available
+    if content_map and url in content_map:
+        for p in content_map[url]:
+            if p and p.strip():
+                parts.append(p.strip())
+
+    return " ".join(parts) if parts else ""
+
+
 def extract_key_points(items: list[NewsItem], max_points: int = 5) -> list[str]:
     """
     Extract key points from a list of related news items.
@@ -161,3 +196,85 @@ def extract_key_points(items: list[NewsItem], max_points: int = 5) -> list[str]:
         return [item.title for item in items[:max_points]]
     
     return sentences
+
+
+def extract_cluster_points(
+    items: list[NewsItem],
+    meta_map: dict[str, Any] | None = None,
+    content_map: dict[str, list[str]] | None = None,
+    max_points: int = 5,
+) -> list[str]:
+    """
+    Extract key points for a single cluster by aggregating multi-source content.
+
+    Builds a combined text from each item's meta description (or RSS summary) and
+    optional key paragraphs, then runs extractive sentence selection to produce
+    3–7 key points. Use when you have enriched meta/content per URL.
+
+    Args:
+        items: List of NewsItem objects in the same cluster.
+        meta_map: Optional URL -> object with .description (e.g. PageMeta).
+        content_map: Optional URL -> list of key paragraph strings.
+        max_points: Maximum number of points (default 5; plan suggests 3–7).
+
+    Returns:
+        List of key point strings for this cluster.
+    """
+    if not items:
+        return []
+
+    combined_parts: list[str] = []
+    for item in items:
+        text = _build_item_summary_text(item, meta_map=meta_map, content_map=content_map)
+        if text:
+            combined_parts.append(text)
+
+    all_text = " ".join(combined_parts)
+    if not all_text:
+        return [item.title for item in items[:max_points]]
+
+    sentences = extract_key_sentences(
+        all_text, ExtractiveConfig(max_sentences=max_points)
+    )
+    if not sentences:
+        return [item.title for item in items[:max_points]]
+
+    return sentences
+
+
+def extract_cluster_points_for_digest(
+    items: list[NewsItem],
+    meta_map: dict[str, Any] | None = None,
+    content_map: dict[str, list[str]] | None = None,
+    max_points: int = 5,
+) -> dict[str, list[str]]:
+    """
+    Produce cluster_id -> list of key points for all clusters in the item list.
+
+    Groups items by cluster_id (or normalized_url/url as fallback), then runs
+    extract_cluster_points on each group. Use this to fill cluster_points when
+    exporting digest JSON.
+
+    Args:
+        items: Full list of items (will be grouped by cluster_id).
+        meta_map: Optional URL -> object with .description.
+        content_map: Optional URL -> list of key paragraph strings.
+        max_points: Max points per cluster (default 5).
+
+    Returns:
+        Dict mapping cluster_id to list of key point strings.
+    """
+    clusters: dict[str, list[NewsItem]] = defaultdict(list)
+    for item in items:
+        cid = item.cluster_id or (item.normalized_url or item.url)
+        clusters[cid].append(item)
+
+    result: dict[str, list[str]] = {}
+    for cid, cluster_items in clusters.items():
+        result[cid] = extract_cluster_points(
+            cluster_items,
+            meta_map=meta_map,
+            content_map=content_map,
+            max_points=max_points,
+        )
+    return result

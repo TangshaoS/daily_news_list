@@ -64,7 +64,38 @@ python run.py fetch --source reuters
 python run.py export --category geopolitics
 python run.py export --category economy
 python run.py export --category commodities
+
+# NotebookLM 每10条一组（每组之间空行分隔，便于分批粘贴）
+python run.py run --group-size 10
+python run.py export --group-size 10
+
+# 导出 digest JSON（供前端每日总结页使用）
+python run.py export --formats txt,md,digest --limit 40
+# 可选：抓取正文并抽取关键段落
+python run.py export --formats txt,md,digest --content --limit 40
 ```
+
+### 端到端验证（当日导出）
+
+用当日导出的 digest 文件验证：resolved_url、meta、正文抽取、points、前端展示结构。
+
+```bash
+# 1. 先导出 digest（会生成 exports/latest_digest.json）
+python run.py export --formats txt,md,digest --limit 40
+
+# 2. 运行 E2E 验证
+python scripts/validate_e2e.py
+# 或指定文件
+python scripts/validate_e2e.py --digest exports/latest_digest.json
+```
+
+验证通过后会生成 `exports/validation_e2e_*.json` 供审计。
+
+## 文档
+
+- [系统架构](docs/architecture.md) — 数据流、模块与数据模型
+- [目标客户与痛点](docs/target_customers.md) — 优先客户分层（投资研究、供应链、企业战略）及核心痛点场景
+- [上线部署方案](docs/deployment.md) — 不租服务器（GitHub Actions + 静态托管）与租 VPS 两种上线方式
 
 ## 项目结构
 

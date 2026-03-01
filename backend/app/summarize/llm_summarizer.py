@@ -50,6 +50,15 @@ Focus areas:
 - 大宗商品 (Commodities): oil, metals, rare earths
 - AI/科技 (AI & Tech): developments, investments, regulations"""
 
+# Prompt for refining extractive cluster points (input: headline + bullets)
+REFINE_CLUSTER_SYSTEM = """You are a news editor. Given a headline and a list of raw bullet points from multiple sources, output 3–5 refined, concise bullet points that capture the key facts. Use clear language. 用中文输出。"""
+REFINE_CLUSTER_USER_TEMPLATE = """标题: {headline}
+
+原始要点:
+{points}
+
+请输出 3–5 条精炼后的要点，每条一行，用 "•" 开头。"""
+
 
 def _build_summary_prompt(
     item: NewsItem,
@@ -72,6 +81,11 @@ def _build_summary_prompt(
 请输出{config.num_points}条简洁的要点，每条一行，用 "•" 开头。"""
 
 
+def _build_refine_prompt(headline: str, points: list[str]) -> str:
+    points_text = "\n".join(f"- {p}" for p in points) if points else "(无)"
+    return REFINE_CLUSTER_USER_TEMPLATE.format(headline=headline, points=points_text)
+
+
 class BaseLLMSummarizer(ABC):
     """Abstract base class for LLM summarizers."""
     
@@ -79,6 +93,15 @@ class BaseLLMSummarizer(ABC):
     async def summarize(self, item: NewsItem, config: SummaryConfig) -> list[str]:
         """Generate summary bullet points for a news item."""
         pass
+
+    async def refine_cluster_points(
+        self,
+        headline: str,
+        points: list[str],
+        max_tokens: int = 300,
+    ) -> list[str]:
+        """Refine extractive cluster points into concise bullets. Default: return points unchanged."""
+        return points
 
 
 class OpenAISummarizer(BaseLLMSummarizer):
@@ -118,6 +141,31 @@ class OpenAISummarizer(BaseLLMSummarizer):
             logger.error(f"OpenAI summarization failed: {e}")
             return []
 
+    async def refine_cluster_points(
+        self,
+        headline: str,
+        points: list[str],
+        max_tokens: int = 300,
+    ) -> list[str]:
+        if not points:
+            return []
+        prompt = _build_refine_prompt(headline, points)
+        try:
+            response = await self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": REFINE_CLUSTER_SYSTEM},
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=max_tokens,
+                temperature=0.3,
+            )
+            content = response.choices[0].message.content or ""
+            return _parse_bullet_points(content)
+        except Exception as e:
+            logger.error(f"OpenAI refine_cluster_points failed: {e}")
+            return points
+
 
 class AnthropicSummarizer(BaseLLMSummarizer):
     """Summarizer using Anthropic API."""
@@ -154,6 +202,28 @@ class AnthropicSummarizer(BaseLLMSummarizer):
         except Exception as e:
             logger.error(f"Anthropic summarization failed: {e}")
             return []
+
+    async def refine_cluster_points(
+        self,
+        headline: str,
+        points: list[str],
+        max_tokens: int = 300,
+    ) -> list[str]:
+        if not points:
+            return []
+        prompt = _build_refine_prompt(headline, points)
+        try:
+            response = await self.client.messages.create(
+                model="claude-3-haiku-20240307",
+                max_tokens=max_tokens,
+                system=REFINE_CLUSTER_SYSTEM,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            content = response.content[0].text if response.content else ""
+            return _parse_bullet_points(content)
+        except Exception as e:
+            logger.error(f"Anthropic refine_cluster_points failed: {e}")
+            return points
 
 
 def _parse_bullet_points(text: str) -> list[str]:
@@ -246,6 +316,40 @@ class LLMSummarizer:
             config = SummaryConfig()
         
         return await self._summarizer.summarize(item, config)
+
+    async def refine_cluster_points(
+        self,
+        headline: str,
+        points: list[str],
+        max_tokens: int = 300,
+    ) -> list[str]:
+        """Refine extractive cluster points with LLM. Returns original points if LLM unavailable."""
+        if not self._summarizer:
+            return points
+        return await self._summarizer.refine_cluster_points(
+            headline, points, max_tokens=max_tokens
+        )
+
+
+async def refine_all_cluster_points(
+    cluster_points: dict[str, list[str]],
+    headlines: dict[str, str],
+    backend: Literal["openai", "anthropic", "auto"] = "auto",
+) -> dict[str, list[str]]:
+    """
+    Refine cluster points for digest using LLM. Keys are cluster_id.
+    Returns original cluster_points if LLM is not available.
+    """
+    summarizer = LLMSummarizer(backend)
+    if not summarizer.is_available:
+        logger.warning("LLM not available; using extractive points as-is")
+        return cluster_points
+    result = {}
+    for cid, points in cluster_points.items():
+        headline = headlines.get(cid, "")
+        refined = await summarizer.refine_cluster_points(headline, points)
+        result[cid] = refined if refined else points
+    return result
 
 
 async def summarize_with_llm(
