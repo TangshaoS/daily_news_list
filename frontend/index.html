@@ -499,7 +499,7 @@
     <header>
         <div class="header-content">
             <a href="#" class="logo">News<span>Summary</span></a>
-            <a href="#" class="export-btn">
+            <a href="#" class="export-btn" id="export-notebooklm-btn" title="下载 URL 列表，粘贴到 NotebookLM 的 Add Source">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="7,10 12,15 17,10"></polyline>
@@ -824,6 +824,45 @@
         document.getElementById("search-input").addEventListener("input", function () {
             searchQuery = this.value;
             if (digest) renderClusters();
+        });
+
+        function exportToNotebookLM() {
+            if (!digest || !digest.clusters || digest.clusters.length === 0) {
+                alert("请先等待数据加载完成后再导出。");
+                return;
+            }
+            var seen = {};
+            var urls = [];
+            var limit = 50;
+            for (var i = 0; i < digest.clusters.length && urls.length < limit; i++) {
+                var items = digest.clusters[i].items || [];
+                for (var j = 0; j < items.length && urls.length < limit; j++) {
+                    var url = items[j].resolved_url || items[j].input_url;
+                    if (url && !seen[url]) {
+                        seen[url] = true;
+                        urls.push(url);
+                    }
+                }
+            }
+            if (urls.length === 0) {
+                alert("当前没有可导出的链接。");
+                return;
+            }
+            var text = urls.join("\n");
+            var blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+            var a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "notebooklm_urls_" + new Date().toISOString().slice(0, 10) + ".txt";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+            alert("已下载 " + urls.length + " 条链接。\n请打开 NotebookLM → Add Source → 粘贴该文件中的 URL。");
+        }
+
+        document.getElementById("export-notebooklm-btn").addEventListener("click", function (e) {
+            e.preventDefault();
+            exportToNotebookLM();
         });
 
         loadDigest();
