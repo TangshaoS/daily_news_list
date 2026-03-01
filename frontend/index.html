@@ -96,6 +96,10 @@
             border-bottom-color: var(--primary);
         }
 
+        .nav-item[data-category] {
+            cursor: pointer;
+        }
+
         /* Main Content */
         main {
             max-width: 1200px;
@@ -207,6 +211,176 @@
         .tag.supply_chain { background: #f3e8ff; color: #6b21a8; }
         .tag.ai_tech { background: #e0f2fe; color: #0369a1; }
         .tag.energy_infra { background: #fef9c3; color: #a16207; }
+
+        /* Digest cluster card */
+        .cluster-card {
+            background: var(--surface);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+
+        .cluster-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .cluster-card-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .cluster-headline {
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.4;
+            flex: 1;
+        }
+
+        .cluster-headline a {
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .cluster-headline a:hover {
+            color: var(--primary);
+        }
+
+        .cluster-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .cluster-card-body {
+            padding: 1.25rem;
+        }
+
+        .cluster-points {
+            list-style: none;
+            margin: 0 0 0.75rem 0;
+            padding: 0;
+        }
+
+        .cluster-points li {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            padding: 0.25rem 0 0.25rem 1rem;
+            position: relative;
+        }
+
+        .cluster-points li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+        }
+
+        .cluster-expand-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.8125rem;
+            color: var(--primary);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.35rem 0;
+            font-weight: 500;
+        }
+
+        .cluster-expand-btn:hover {
+            text-decoration: underline;
+        }
+
+        .cluster-details {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            display: none;
+        }
+
+        .cluster-details.expanded {
+            display: block;
+        }
+
+        .cluster-details h4 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .cluster-key-paragraphs {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .cluster-key-paragraphs p {
+            margin: 0 0 0.5rem 0;
+        }
+
+        .cluster-sources {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .cluster-sources li {
+            margin-bottom: 0.5rem;
+        }
+
+        .cluster-sources a {
+            font-size: 0.875rem;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .cluster-sources a:hover {
+            text-decoration: underline;
+        }
+
+        .cluster-sources .source-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-left: 0.25rem;
+        }
+
+        .loading-state, .error-state {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        .error-state {
+            color: var(--danger);
+        }
+
+        .search-box {
+            max-width: 1200px;
+            margin: 0 auto 1rem;
+            padding: 0 1.5rem;
+        }
+
+        .search-box input {
+            width: 100%;
+            max-width: 400px;
+            padding: 0.6rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
 
         .news-score {
             font-size: 0.75rem;
@@ -337,246 +511,26 @@
     </header>
 
     <nav>
-        <div class="nav-content">
-            <a href="#" class="nav-item active">全部热点</a>
-            <a href="#" class="nav-item">地缘政治</a>
-            <a href="#" class="nav-item">经济数据</a>
-            <a href="#" class="nav-item">投资市场</a>
-            <a href="#" class="nav-item">供应链</a>
-            <a href="#" class="nav-item">大宗商品</a>
-            <a href="#" class="nav-item">AI/科技</a>
-            <a href="#" class="nav-item">能源电力</a>
+        <div class="nav-content" id="nav-categories">
+            <span class="nav-item active" data-category="">全部热点</span>
         </div>
     </nav>
 
     <main>
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="搜索标题或要点..." aria-label="搜索">
+        </div>
         <div class="layout">
-            <div class="content">
-                <!-- 地缘政治 Section -->
-                <h2 class="section-title">
-                    地缘政治
-                    <span class="badge">8 条新闻</span>
-                </h2>
-                <div class="news-grid">
-                    <article class="news-card">
-                        <div class="news-card-header">
-                            <span class="news-source">路透社</span>
-                            <span class="news-time">2小时前</span>
-                        </div>
-                        <div class="news-card-body">
-                            <h3 class="news-title">
-                                <a href="#">美国宣布对俄罗斯实施新一轮制裁，涉及能源和金融领域</a>
-                            </h3>
-                            <p class="news-summary">
-                                美国财政部表示，新制裁将针对俄罗斯石油出口和主要银行，预计将影响全球能源市场...
-                            </p>
-                            <div class="news-tags">
-                                <span class="tag geopolitics">地缘政治</span>
-                                <span class="tag supply_chain">供应链</span>
-                                <span class="news-score">热度 0.95</span>
-                            </div>
-                        </div>
-                    </article>
-
-                    <article class="news-card">
-                        <div class="news-card-header">
-                            <span class="news-source">金融时报</span>
-                            <span class="news-time">3小时前</span>
-                        </div>
-                        <div class="news-card-body">
-                            <h3 class="news-title">
-                                <a href="#">欧盟考虑扩大对中国电动汽车关税，中方警告将采取反制措施</a>
-                            </h3>
-                            <p class="news-summary">
-                                欧盟委员会正在评估是否将临时关税转为永久性措施，此举可能加剧中欧贸易紧张...
-                            </p>
-                            <div class="news-tags">
-                                <span class="tag geopolitics">地缘政治</span>
-                                <span class="tag markets">市场</span>
-                                <span class="news-score">热度 0.89</span>
-                            </div>
-                        </div>
-                    </article>
-                </div>
-
-                <!-- 经济数据 Section -->
-                <h2 class="section-title">
-                    经济数据与货币政策
-                    <span class="badge">6 条新闻</span>
-                </h2>
-                <div class="news-grid">
-                    <article class="news-card">
-                        <div class="news-card-header">
-                            <span class="news-source">华尔街日报</span>
-                            <span class="news-time">1小时前</span>
-                        </div>
-                        <div class="news-card-body">
-                            <h3 class="news-title">
-                                <a href="#">美联储会议纪要显示官员对降息时机存在分歧</a>
-                            </h3>
-                            <p class="news-summary">
-                                多数官员认为通胀进展不足以支持近期降息，但部分成员担忧就业市场放缓风险...
-                            </p>
-                            <div class="news-tags">
-                                <span class="tag economy">经济</span>
-                                <span class="tag markets">市场</span>
-                                <span class="news-score">热度 0.92</span>
-                            </div>
-                        </div>
-                    </article>
-
-                    <article class="news-card">
-                        <div class="news-card-header">
-                            <span class="news-source">彭博社</span>
-                            <span class="news-time">4小时前</span>
-                        </div>
-                        <div class="news-card-body">
-                            <h3 class="news-title">
-                                <a href="#">中国1月CPI同比上涨0.3%，PPI降幅收窄</a>
-                            </h3>
-                            <p class="news-summary">
-                                数据显示消费需求温和复苏，但工业品价格仍面临下行压力，市场预期更多刺激措施...
-                            </p>
-                            <div class="news-tags">
-                                <span class="tag economy">经济</span>
-                                <span class="news-score">热度 0.78</span>
-                            </div>
-                        </div>
-                    </article>
-                </div>
-
-                <!-- 大宗商品 Section -->
-                <h2 class="section-title">
-                    大宗商品与稀土
-                    <span class="badge">4 条新闻</span>
-                </h2>
-                <div class="news-grid">
-                    <article class="news-card">
-                        <div class="news-card-header">
-                            <span class="news-source">路透社</span>
-                            <span class="news-time">5小时前</span>
-                        </div>
-                        <div class="news-card-body">
-                            <h3 class="news-title">
-                                <a href="#">铜价创六个月新高，受中国需求复苏和供应担忧推动</a>
-                            </h3>
-                            <p class="news-summary">
-                                LME铜价突破9000美元/吨，分析师认为新能源转型需求将持续支撑价格...
-                            </p>
-                            <div class="news-tags">
-                                <span class="tag commodities">大宗商品</span>
-                                <span class="tag markets">市场</span>
-                                <span class="news-score">热度 0.85</span>
-                            </div>
-                        </div>
-                    </article>
-
-                    <article class="news-card">
-                        <div class="news-card-header">
-                            <span class="news-source">澎湃新闻</span>
-                            <span class="news-time">6小时前</span>
-                        </div>
-                        <div class="news-card-body">
-                            <h3 class="news-title">
-                                <a href="#">稀土出口管制趋严，行业整合加速进行</a>
-                            </h3>
-                            <p class="news-summary">
-                                工信部表示将加强稀土资源战略储备，推动行业高质量发展，关注供应链安全...
-                            </p>
-                            <div class="news-tags">
-                                <span class="tag commodities">大宗商品</span>
-                                <span class="tag supply_chain">供应链</span>
-                                <span class="news-score">热度 0.76</span>
-                            </div>
-                        </div>
-                    </article>
-                </div>
+            <div class="content" id="content">
+                <div class="loading-state" id="loading">正在加载 digest…</div>
+                <div class="error-state" id="error" style="display:none;"></div>
+                <div id="digest-content" style="display:none;"></div>
             </div>
 
-            <!-- Sidebar -->
             <aside class="sidebar">
-                <div class="hotlist">
+                <div class="hotlist" id="hotlist">
                     <h3 class="hotlist-title">热度榜 TOP 10</h3>
-                    
-                    <div class="hotlist-item">
-                        <span class="hotlist-rank top3">1</span>
-                        <div class="hotlist-content">
-                            <a href="#" class="hotlist-item-title">美国宣布对俄罗斯实施新一轮制裁</a>
-                            <span class="hotlist-meta">路透社 · 3源报道</span>
-                        </div>
-                    </div>
-                    
-                    <div class="hotlist-item">
-                        <span class="hotlist-rank top3">2</span>
-                        <div class="hotlist-content">
-                            <a href="#" class="hotlist-item-title">美联储会议纪要显示降息分歧</a>
-                            <span class="hotlist-meta">华尔街日报 · 2源报道</span>
-                        </div>
-                    </div>
-                    
-                    <div class="hotlist-item">
-                        <span class="hotlist-rank top3">3</span>
-                        <div class="hotlist-content">
-                            <a href="#" class="hotlist-item-title">欧盟考虑扩大对中国电动汽车关税</a>
-                            <span class="hotlist-meta">金融时报 · 2源报道</span>
-                        </div>
-                    </div>
-                    
-                    <div class="hotlist-item">
-                        <span class="hotlist-rank">4</span>
-                        <div class="hotlist-content">
-                            <a href="#" class="hotlist-item-title">铜价创六个月新高</a>
-                            <span class="hotlist-meta">路透社</span>
-                        </div>
-                    </div>
-                    
-                    <div class="hotlist-item">
-                        <span class="hotlist-rank">5</span>
-                        <div class="hotlist-content">
-                            <a href="#" class="hotlist-item-title">中国1月CPI同比上涨0.3%</a>
-                            <span class="hotlist-meta">彭博社</span>
-                        </div>
-                    </div>
-                    
-                    <div class="hotlist-item">
-                        <span class="hotlist-rank">6</span>
-                        <div class="hotlist-content">
-                            <a href="#" class="hotlist-item-title">稀土出口管制趋严</a>
-                            <span class="hotlist-meta">澎湃新闻</span>
-                        </div>
-                    </div>
-                    
-                    <div class="hotlist-item">
-                        <span class="hotlist-rank">7</span>
-                        <div class="hotlist-content">
-                            <a href="#" class="hotlist-item-title">OpenAI发布新一代模型</a>
-                            <span class="hotlist-meta">彭博社</span>
-                        </div>
-                    </div>
-                    
-                    <div class="hotlist-item">
-                        <span class="hotlist-rank">8</span>
-                        <div class="hotlist-content">
-                            <a href="#" class="hotlist-item-title">OPEC+维持减产计划不变</a>
-                            <span class="hotlist-meta">路透社</span>
-                        </div>
-                    </div>
-                    
-                    <div class="hotlist-item">
-                        <span class="hotlist-rank">9</span>
-                        <div class="hotlist-content">
-                            <a href="#" class="hotlist-item-title">日元跌至155关口</a>
-                            <span class="hotlist-meta">金融时报</span>
-                        </div>
-                    </div>
-                    
-                    <div class="hotlist-item">
-                        <span class="hotlist-rank">10</span>
-                        <div class="hotlist-content">
-                            <a href="#" class="hotlist-item-title">台积电考虑扩大美国投资</a>
-                            <span class="hotlist-meta">华尔街日报</span>
-                        </div>
-                    </div>
+                    <div id="hotlist-items"></div>
                 </div>
             </aside>
         </div>
@@ -586,5 +540,294 @@
         <p>数据来源：路透社、华尔街日报、彭博社、金融时报、澎湃新闻</p>
         <p>本站仅聚合公开RSS链接，不存储全文内容。点击标题跳转原文。</p>
     </footer>
+
+    <script>
+(function () {
+        // 本地打开 /frontend/index.html 时用绝对路径；部署到 GitHub Pages（首页即 index.html）时用相对路径
+        var DIGEST_URL = (window.location.pathname.indexOf("frontend") !== -1)
+            ? "/exports/latest_digest.json"
+            : "exports/latest_digest.json";
+        var CATEGORY_LABELS = {
+            "geopolitics": "地缘政治",
+            "economy": "经济数据",
+            "markets": "投资市场",
+            "supply_chain": "供应链",
+            "commodities": "大宗商品",
+            "ai_tech": "AI/科技",
+            "energy_infra": "能源电力",
+            "other": "其他"
+        };
+
+        var digest = null;
+        var selectedCategory = "";
+        var searchQuery = "";
+
+        function categoryLabel(key) {
+            return CATEGORY_LABELS[key] || key;
+        }
+
+        function renderNav() {
+            var nav = document.getElementById("nav-categories");
+            nav.innerHTML = "";
+            var all = document.createElement("span");
+            all.className = "nav-item" + (selectedCategory === "" ? " active" : "");
+            all.setAttribute("data-category", "");
+            all.textContent = "全部热点";
+            all.addEventListener("click", function () { setCategory(""); });
+            nav.appendChild(all);
+            if (digest && digest.by_category) {
+                Object.keys(digest.by_category).sort().forEach(function (cat) {
+                    var span = document.createElement("span");
+                    span.className = "nav-item" + (selectedCategory === cat ? " active" : "");
+                    span.setAttribute("data-category", cat);
+                    span.textContent = categoryLabel(cat);
+                    span.addEventListener("click", function () { setCategory(cat); });
+                    nav.appendChild(span);
+                });
+            }
+        }
+
+        function setCategory(cat) {
+            selectedCategory = cat;
+            renderNav();
+            renderClusters();
+        }
+
+        function clusterMatchesSearch(c) {
+            if (!searchQuery.trim()) return true;
+            var q = searchQuery.toLowerCase();
+            var headline = (c.headline || "").toLowerCase();
+            var pointsText = (c.points || []).join(" ").toLowerCase();
+            return headline.indexOf(q) !== -1 || pointsText.indexOf(q) !== -1;
+        }
+
+        function getClustersToShow() {
+            if (!digest || !digest.clusters) return [];
+            var list = digest.clusters;
+            if (selectedCategory) {
+                var ids = digest.by_category[selectedCategory];
+                if (!ids || !ids.length) return [];
+                var idSet = {};
+                ids.forEach(function (id) { idSet[id] = true; });
+                list = list.filter(function (c) { return idSet[c.cluster_id]; });
+            }
+            return list.filter(clusterMatchesSearch);
+        }
+
+        function formatTime(iso) {
+            if (!iso) return "";
+            try {
+                var d = new Date(iso);
+                var now = new Date();
+                var diff = (now - d) / 60000;
+                if (diff < 60) return Math.round(diff) + " 分钟前";
+                if (diff < 1440) return Math.round(diff / 60) + " 小时前";
+                if (diff < 43200) return Math.round(diff / 1440) + " 天前";
+                return d.toLocaleDateString("zh-CN");
+            } catch (e) { return iso; }
+        }
+
+        function renderClusterCard(c) {
+            var firstUrl = c.items && c.items[0] ? (c.items[0].resolved_url || c.items[0].input_url) : "#";
+            var sourceCount = (c.items && c.items.length) || 0;
+            var hasDetails = (c.items && c.items.length > 0) || (c.points && c.points.length > 0);
+            var keyParagraphs = [];
+            if (c.items) {
+                c.items.forEach(function (it) {
+                    if (it.key_paragraphs && it.key_paragraphs.length) {
+                        keyParagraphs.push({ title: it.title, paragraphs: it.key_paragraphs });
+                    }
+                });
+            }
+
+            var card = document.createElement("article");
+            card.className = "cluster-card";
+            card.dataset.clusterId = c.cluster_id;
+
+            var header = document.createElement("div");
+            header.className = "cluster-card-header";
+            var headlineEl = document.createElement("h3");
+            headlineEl.className = "cluster-headline";
+            var link = document.createElement("a");
+            link.href = firstUrl;
+            link.target = "_blank";
+            link.rel = "noopener";
+            link.textContent = c.headline || "无标题";
+            headlineEl.appendChild(link);
+            var meta = document.createElement("span");
+            meta.className = "cluster-meta";
+            meta.textContent = sourceCount + " 条来源";
+            header.appendChild(headlineEl);
+            header.appendChild(meta);
+            card.appendChild(header);
+
+            var body = document.createElement("div");
+            body.className = "cluster-card-body";
+            if (c.points && c.points.length > 0) {
+                var ul = document.createElement("ul");
+                ul.className = "cluster-points";
+                c.points.forEach(function (p) {
+                    var li = document.createElement("li");
+                    li.textContent = p;
+                    ul.appendChild(li);
+                });
+                body.appendChild(ul);
+            }
+            if (hasDetails) {
+                var btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "cluster-expand-btn";
+                btn.innerHTML = "展开详情 ▼";
+                btn.setAttribute("aria-expanded", "false");
+                var details = document.createElement("div");
+                details.className = "cluster-details";
+                details.id = "details-" + c.cluster_id;
+
+                if (keyParagraphs.length > 0) {
+                    var h4p = document.createElement("h4");
+                    h4p.textContent = "关键段落";
+                    details.appendChild(h4p);
+                    var divP = document.createElement("div");
+                    divP.className = "cluster-key-paragraphs";
+                    keyParagraphs.forEach(function (kp) {
+                        var p = document.createElement("p");
+                        var parts = (kp.paragraphs || []).slice(0, 2).map(function (para) { return escapeHtml(truncateForDisplay(para)); });
+                        p.innerHTML = "<strong>" + escapeHtml(kp.title) + "</strong><br>" + parts.join("<br><br>");
+                        divP.appendChild(p);
+                    });
+                    details.appendChild(divP);
+                }
+                if (c.items && c.items.length > 0) {
+                    var h4s = document.createElement("h4");
+                    h4s.textContent = "多源列表";
+                    details.appendChild(h4s);
+                    var ulSrc = document.createElement("ul");
+                    ulSrc.className = "cluster-sources";
+                    c.items.forEach(function (it) {
+                        var li = document.createElement("li");
+                        var a = document.createElement("a");
+                        a.href = it.resolved_url || it.input_url;
+                        a.target = "_blank";
+                        a.rel = "noopener";
+                        a.textContent = it.title || it.input_url;
+                        li.appendChild(a);
+                        var meta = document.createElement("span");
+                        meta.className = "source-meta";
+                        meta.textContent = (it.source_id || "") + (it.published_at ? " · " + formatTime(it.published_at) : "");
+                        li.appendChild(meta);
+                        ulSrc.appendChild(li);
+                    });
+                    details.appendChild(ulSrc);
+                }
+
+                btn.addEventListener("click", function () {
+                    var expanded = details.classList.toggle("expanded");
+                    btn.setAttribute("aria-expanded", expanded);
+                    btn.innerHTML = expanded ? "收起详情 ▲" : "展开详情 ▼";
+                });
+                body.appendChild(btn);
+                body.appendChild(details);
+            }
+            card.appendChild(body);
+            return card;
+        }
+
+        function escapeHtml(s) {
+            if (!s) return "";
+            var div = document.createElement("div");
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        var MAX_PARAGRAPH_DISPLAY = 450;
+        function truncateForDisplay(s) {
+            if (!s || s.length <= MAX_PARAGRAPH_DISPLAY) return s || "";
+            return s.slice(0, MAX_PARAGRAPH_DISPLAY).trim() + "\u2026";
+        }
+
+        function renderClusters() {
+            var container = document.getElementById("digest-content");
+            var loading = document.getElementById("loading");
+            var error = document.getElementById("error");
+            if (!digest) {
+                container.style.display = "none";
+                error.style.display = "none";
+                loading.style.display = "block";
+                return;
+            }
+            loading.style.display = "none";
+            error.style.display = "none";
+            container.style.display = "block";
+
+            var clusters = getClustersToShow();
+            var title = document.createElement("h2");
+            title.className = "section-title";
+            var label = selectedCategory ? categoryLabel(selectedCategory) : "全部热点";
+            title.innerHTML = label + " <span class=\"badge\">" + clusters.length + " 个聚类</span>";
+            container.innerHTML = "";
+            container.appendChild(title);
+            var grid = document.createElement("div");
+            grid.className = "news-grid";
+            clusters.forEach(function (c) {
+                grid.appendChild(renderClusterCard(c));
+            });
+            container.appendChild(grid);
+        }
+
+        function renderHotlist() {
+            var container = document.getElementById("hotlist-items");
+            container.innerHTML = "";
+            if (!digest || !digest.clusters || digest.clusters.length === 0) return;
+            var top = digest.clusters.slice(0, 10);
+            top.forEach(function (c, i) {
+                var firstUrl = c.items && c.items[0] ? (c.items[0].resolved_url || c.items[0].input_url) : "#";
+                var count = (c.items && c.items.length) || 0;
+                var item = document.createElement("div");
+                item.className = "hotlist-item";
+                item.innerHTML =
+                    "<span class=\"hotlist-rank" + (i < 3 ? " top3" : "") + "\">" + (i + 1) + "</span>" +
+                    "<div class=\"hotlist-content\">" +
+                    "<a href=\"" + escapeHtml(firstUrl) + "\" target=\"_blank\" rel=\"noopener\" class=\"hotlist-item-title\">" + escapeHtml(c.headline || "无标题") + "</a>" +
+                    "<span class=\"hotlist-meta\">" + count + " 源报道</span>" +
+                    "</div>";
+                container.appendChild(item);
+            });
+        }
+
+        function onDigestLoaded(data) {
+            digest = data;
+            renderNav();
+            renderClusters();
+            renderHotlist();
+        }
+
+        function onDigestError(msg) {
+            document.getElementById("loading").style.display = "none";
+            document.getElementById("digest-content").style.display = "none";
+            var err = document.getElementById("error");
+            err.textContent = "加载失败：" + msg;
+            err.style.display = "block";
+        }
+
+        function loadDigest() {
+            fetch(DIGEST_URL)
+                .then(function (r) {
+                    if (!r.ok) throw new Error(r.status + " " + r.statusText);
+                    return r.json();
+                })
+                .then(onDigestLoaded)
+                .catch(function (e) {
+                    onDigestError(e.message || "无法加载 " + DIGEST_URL + "，请先运行导出生成 digest。");
+                });
+        }
+
+        document.getElementById("search-input").addEventListener("input", function () {
+            searchQuery = this.value;
+            if (digest) renderClusters();
+        });
+
+        loadDigest();
+})();
+    </script>
 </body>
 </html>

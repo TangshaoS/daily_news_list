@@ -10,6 +10,9 @@ aiohttp>=3.9.0
 beautifulsoup4>=4.12.0
 lxml>=5.0.0
 
+# Article body extraction (main text from HTML)
+trafilatura>=2.0.0
+
 # URL normalization
 url-normalize>=1.4.3
 
@@ -29,6 +32,9 @@ python-dateutil>=2.8.0
 # Optional: LLM integration (uncomment if needed)
 # openai>=1.0.0
 # anthropic>=0.18.0
+
+# Optional: Google News URL decoding (when redirects land on gstatic)
+# googlenewsdecoder>=0.1.7
 
 # Development
 pytest>=8.0.0

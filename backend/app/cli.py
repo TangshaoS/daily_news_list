@@ -18,8 +18,11 @@ from rich.console import Console
 from rich.logging import RichHandler
 from rich.table import Table
 
+from collections import defaultdict
+
 from .dedup import cluster_similar_items, deduplicate_items
 from .dedup.deduplicator import get_cluster_representatives
+from .enrich import enrich_items, enrich_items_content
 from .export import export_for_notebooklm
 from .filter import filter_by_topics
 from .ingest import fetch_all_sources
@@ -28,6 +31,8 @@ from .normalize import normalize_news_items
 from .rank import rank_items
 from .sources import SOURCE_REGISTRY, get_all_sources, get_source
 from .store import NewsDatabase
+from .summarize.extractive import extract_cluster_points_for_digest
+from .summarize.llm_summarizer import refine_all_cluster_points
 
 # CLI app
 app = typer.Typer(
@@ -124,12 +129,52 @@ def fetch(
 def export(
     limit: int = typer.Option(40, "--limit", "-n", help="Max items to export"),
     output_dir: str = typer.Option("exports", "--output", "-o", help="Output directory"),
-    formats: str = typer.Option("txt,md", "--formats", "-f", help="Export formats (txt,md,json)"),
+    formats: str = typer.Option("txt,md", "--formats", "-f", help="Export formats (txt,md,json,digest)"),
+    group_size: int = typer.Option(10, "--group-size", help="Insert blank line every N URLs (default 10)"),
     category: Optional[str] = typer.Option(
         None, "--category", "-c", help="Filter by category"
     ),
     db_path: str = typer.Option("data/news.db", "--db", help="Database file path"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+    enrich_meta: bool = typer.Option(
+        True,
+        "--enrich-meta/--no-enrich-meta",
+        help="Fetch page meta (title, description) for enriched JSON/digest",
+    ),
+    enrich_concurrency: int = typer.Option(
+        8,
+        "--enrich-concurrency",
+        min=1,
+        max=32,
+        help="Max concurrent page meta fetches",
+    ),
+    content: bool = typer.Option(
+        False,
+        "--content/--no-content",
+        help="Fetch and extract article body for digest/JSON (only for items being enriched)",
+    ),
+    content_concurrency: int = typer.Option(
+        5,
+        "--content-concurrency",
+        min=1,
+        max=16,
+        help="Max concurrent article content fetches (only when --content)",
+    ),
+    max_bytes: int = typer.Option(
+        768 * 1024,
+        "--max-bytes",
+        help="Max HTML bytes per page for content fetch (only when --content)",
+    ),
+    digest: Optional[bool] = typer.Option(
+        None,
+        "--digest/--no-digest",
+        help="Include digest JSON export (add/remove 'digest' from formats)",
+    ),
+    llm: bool = typer.Option(
+        False,
+        "--llm/--no-llm",
+        help="Use LLM to refine cluster points in digest (requires API key)",
+    ),
 ):
     """
     Export top news items for NotebookLM import.
@@ -158,28 +203,96 @@ def export(
             console.print(f"Available: {', '.join(c.value for c in Category)}")
             raise typer.Exit(1)
     
-    # Get top items
-    items = db.get_top_items(limit=limit * 2, categories=categories, hours_ago=72)
-    
-    if not items:
+    # Parse formats early; apply --digest/--no-digest if given
+    format_list = [f.strip() for f in formats.split(",") if f.strip()]
+    if digest is not None:
+        if digest and "digest" not in format_list:
+            format_list.append("digest")
+        elif not digest and "digest" in format_list:
+            format_list.remove("digest")
+    need_digest = "digest" in format_list
+    need_json_or_digest = "json" in format_list or need_digest
+
+    # Get top items; fetch more when digest is requested so we have full clusters
+    fetch_limit = max(limit * 2, 300) if need_digest else limit * 2
+    all_top = db.get_top_items(limit=fetch_limit, categories=categories, hours_ago=72)
+
+    if not all_top:
         console.print("[yellow]No items found matching criteria.[/yellow]")
         return
-    
-    # Get cluster representatives to avoid duplicates
-    items = get_cluster_representatives(items)
+
+    # Cluster representatives for txt/md/json (one item per cluster)
+    items = get_cluster_representatives(all_top)
     items = items[:limit]
-    
+    digest_items = all_top if need_digest else None
+
     console.print(f"Selected [green]{len(items)}[/green] items for export")
-    
-    # Parse formats
-    format_list = [f.strip() for f in formats.split(",")]
-    
+
+    # Enrich with page metadata when JSON or digest is requested
+    meta_map = None
+    if enrich_meta and need_json_or_digest:
+        console.print("[dim]Fetching page metadata (title, description)...[/dim]")
+        to_enrich = digest_items if digest_items is not None else items
+        meta_map = asyncio.run(enrich_items(to_enrich, concurrency=enrich_concurrency))
+        console.print(f"[dim]Enriched [green]{len(meta_map)}[/green] items[/dim]")
+
+    # Optional: fetch and extract article content for digest/JSON
+    content_map = None
+    if content and need_json_or_digest:
+        console.print("[dim]Fetching article content (body extraction)...[/dim]")
+        to_content = digest_items if digest_items is not None else items
+        content_result = asyncio.run(
+            enrich_items_content(
+                to_content,
+                meta_map=meta_map,
+                concurrency=content_concurrency,
+                max_bytes=max_bytes,
+            )
+        )
+        content_map = {
+            url: ac.key_paragraphs for url, ac in content_result.items()
+        }
+        console.print(f"[dim]Content enriched [green]{len(content_map)}[/green] items[/dim]")
+
+    # Optional: LLM-refine cluster points for digest
+    precomputed_cluster_points = None
+    if need_digest and llm and digest_items:
+        console.print("[dim]Computing extractive cluster points...[/dim]")
+        precomputed_cluster_points = extract_cluster_points_for_digest(
+            digest_items,
+            meta_map=meta_map,
+            content_map=content_map,
+            max_points=5,
+        )
+        # Build cluster_id -> headline for refinement
+        clusters_by_id = defaultdict(list)
+        for item in digest_items:
+            cid = item.cluster_id or (item.normalized_url or item.url)
+            clusters_by_id[cid].append(item)
+        headlines = {}
+        for cid, cluster_items in clusters_by_id.items():
+            cluster_items.sort(
+                key=lambda x: (x.final_score, x.published_at or x.fetched_at),
+                reverse=True,
+            )
+            headlines[cid] = cluster_items[0].title if cluster_items else ""
+        console.print("[dim]Refining cluster points with LLM...[/dim]")
+        precomputed_cluster_points = asyncio.run(
+            refine_all_cluster_points(precomputed_cluster_points, headlines)
+        )
+        console.print("[dim]LLM refinement done.[/dim]")
+
     # Export
     results = export_for_notebooklm(
         items,
         export_dir=output_dir,
         limit=limit,
         formats=format_list,
+        group_size=group_size,
+        meta_map=meta_map,
+        content_map=content_map,
+        digest_items=digest_items,
+        cluster_points=precomputed_cluster_points,
     )
     
     console.print("\n[bold]Exported files:[/bold]")
@@ -205,6 +318,7 @@ def run(
     output_dir: str = typer.Option("exports", "--output", "-o", help="Output directory"),
     db_path: str = typer.Option("data/news.db", "--db", help="Database file path"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+    group_size: int = typer.Option(10, "--group-size", help="Insert blank line every N URLs (default 10)"),
 ):
     """
     Run the full pipeline: fetch, process, and export.
@@ -245,7 +359,12 @@ def run(
     # Export
     console.print("[bold]Step 4: Exporting[/bold]")
     export_items = get_cluster_representatives(items)[:limit]
-    results = export_for_notebooklm(export_items, export_dir=output_dir, limit=limit)
+    results = export_for_notebooklm(
+        export_items,
+        export_dir=output_dir,
+        limit=limit,
+        group_size=group_size,
+    )
     
     for result in results:
         console.print(f"  - {result.filepath}")
